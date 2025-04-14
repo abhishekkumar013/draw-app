@@ -1,0 +1,1 @@
+{"root":["./src/index.ts","./src/controllers/auth.controller.ts","./src/controllers/chats.controller.ts","./src/controllers/room.controlller.ts","./src/middleware/auth.middleware.ts","./src/middleware/errorhandler.middleware.ts","./src/routes/auth.routes.ts","./src/routes/chats.routes.ts","./src/routes/room.routes.ts","./src/utils/aynchandler.ts"],"version":"5.8.2"}
