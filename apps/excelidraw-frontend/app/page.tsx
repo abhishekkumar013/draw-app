@@ -33,7 +33,7 @@ function App() {
                 </Button>
               </Link>
               <Link href="/signup">
-                <Button variant="outline" size="lg" className="h-12 px-6">
+                <Button variant="secondary" size="lg" className="h-12 px-6">
                   Sign up
                 </Button>
               </Link>

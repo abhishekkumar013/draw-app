@@ -17,12 +17,21 @@ export const Button = ({
   onClick,
   children,
 }: ButtonProps) => {
+  const baseStyle =
+    "rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200";
+
+  const sizeStyle = size === "lg" ? "px-4 py-2 text-base" : "px-2 py-1 text-sm";
+
+  const variantStyle =
+    variant === "primary"
+      ? "bg-blue-600 text-white hover:bg-blue-700"
+      : variant === "secondary"
+        ? "bg-gray-100 text-gray-900 shadow-sm hover:bg-gray-200"
+        : "border border-gray-300 bg-white text-gray-900 shadow-sm hover:bg-gray-100";
+
   return (
     <button
-      className={`${className}
-        ${variant === "primary" ? "bg-primary" : variant == "secondary" ? "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80" : "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground"}
-        ${size === "lg" ? "px-4 py-2" : "px-2 py-1"}
-      `}
+      className={`${baseStyle} ${variantStyle} ${sizeStyle} ${className ?? ""}`}
       onClick={onClick}
     >
       {children}
