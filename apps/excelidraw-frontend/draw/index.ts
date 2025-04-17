@@ -1,3 +1,6 @@
+import { HTTP_BACKEND } from "@/config";
+import axios from "axios";
+
 type Shape =
   | {
       type: "rect";
@@ -20,14 +23,30 @@ type Shape =
       endY: number;
     };
 
-export function initdraw(canvas: HTMLCanvasElement) {
+export async function initdraw(
+  canvas: HTMLCanvasElement,
+  roomId: string,
+  socket: WebSocket
+) {
   const ctx = canvas.getContext("2d");
 
-  let existingShapes: Shape[] = [];
+  let existingShapes: Shape[] = await getExistingShapes(roomId);
 
   if (!ctx) {
     return;
   }
+
+  socket.onmessage = (event) => {
+    const message = JSON.parse(event.data);
+
+    if (message.type === "chat") {
+      const parsedShape = JSON.parse(message.message);
+      existingShapes.push(parsedShape.shape);
+      clearCanvas(existingShapes, canvas, ctx);
+    }
+  };
+
+  clearCanvas(existingShapes, canvas, ctx);
   ctx.strokeStyle = "white";
   ctx.lineWidth = 2;
 
@@ -44,14 +63,25 @@ export function initdraw(canvas: HTMLCanvasElement) {
     clicked = false;
     const height = e.clientX - startX;
     const width = e.clientY - startY;
-
-    existingShapes.push({
+    const shape = {
       type: "rect",
       x: startX,
       y: startY,
       height,
       width,
-    });
+    };
+    existingShapes.push(shape);
+
+    socket.send(
+      JSON.stringify({
+        type: "chat",
+        roomId: roomId,
+        message: JSON.stringify({
+          shape,
+        }),
+      })
+    );
+
     clearCanvas(existingShapes, canvas, ctx);
   });
   canvas.addEventListener("mousemove", (e) => {
@@ -84,3 +114,23 @@ function clearCanvas(
     }
   });
 }
+
+const getExistingShapes = async (roomId: string) => {
+  try {
+    const res = await axios.get(`${HTTP_BACKEND}/chats/${roomId}`);
+    // console.log("SHAPE h", res);
+    const messages = res.data.chats;
+
+    const shapes = messages.map((x: { message: string }) => {
+      // console.log(x);
+      const messageData = JSON.parse(x.message);
+      // console.log(messageData);
+      return messageData.shape;
+    });
+
+    return shapes;
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+};
