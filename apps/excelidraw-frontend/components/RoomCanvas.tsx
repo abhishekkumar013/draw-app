@@ -18,7 +18,7 @@ const RoomCanvas = ({ roomId }: { roomId: string }) => {
         type: "join_room",
         roomId,
       });
-      console.log(data);
+      // console.log(data);
       ws.send(data);
     };
   }, []);

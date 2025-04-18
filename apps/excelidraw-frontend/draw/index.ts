@@ -16,7 +16,7 @@ type Shape =
       radius: number;
     }
   | {
-      type: "pencil";
+      type: "line";
       startX: number;
       startY: number;
       endX: number;
@@ -26,7 +26,8 @@ type Shape =
 export async function initdraw(
   canvas: HTMLCanvasElement,
   roomId: string,
-  socket: WebSocket
+  socket: WebSocket,
+  selectedToolRef: React.RefObject<"rect" | "circle" | "line">
 ) {
   const ctx = canvas.getContext("2d");
 
@@ -54,22 +55,50 @@ export async function initdraw(
   let startX = 0;
   let startY = 0;
 
-  canvas.addEventListener("mousedown", (e) => {
+  // Clean up previous event listeners to prevent duplicates
+  const mouseDownHandler = (e: MouseEvent) => {
     clicked = true;
     startX = e.clientX;
     startY = e.clientY;
-  });
-  canvas.addEventListener("mouseup", (e) => {
+  };
+
+  const mouseUpHandler = (e: MouseEvent) => {
+    if (!clicked) return;
     clicked = false;
-    const height = e.clientX - startX;
-    const width = e.clientY - startY;
-    const shape = {
-      type: "rect",
-      x: startX,
-      y: startY,
-      height,
-      width,
-    };
+
+    let shape: Shape;
+
+    if (selectedToolRef.current === "rect") {
+      const width = e.clientX - startX;
+      const height = e.clientY - startY;
+      shape = {
+        type: "rect",
+        x: startX,
+        y: startY,
+        width,
+        height,
+      };
+    } else if (selectedToolRef.current === "circle") {
+      const radius = Math.sqrt(
+        Math.pow(e.clientX - startX, 2) + Math.pow(e.clientY - startY, 2)
+      );
+      shape = {
+        type: "circle",
+        centerX: startX,
+        centerY: startY,
+        radius,
+      };
+    } else {
+      // Line
+      shape = {
+        type: "line",
+        startX,
+        startY,
+        endX: e.clientX,
+        endY: e.clientY,
+      };
+    }
+
     existingShapes.push(shape);
 
     socket.send(
@@ -83,19 +112,44 @@ export async function initdraw(
     );
 
     clearCanvas(existingShapes, canvas, ctx);
-  });
-  canvas.addEventListener("mousemove", (e) => {
-    if (clicked) {
-      const height = e.clientX - startX;
-      const width = e.clientY - startY;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
 
-      clearCanvas(existingShapes, canvas, ctx);
+  const mouseMoveHandler = (e: MouseEvent) => {
+    if (!clicked) return;
 
-      //   ctx.strokeStyle = "white";
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    clearCanvas(existingShapes, canvas, ctx);
+
+    if (selectedToolRef.current === "rect") {
+      const width = e.clientX - startX;
+      const height = e.clientY - startY;
       ctx.strokeRect(startX, startY, width, height);
+    } else if (selectedToolRef.current === "circle") {
+      const radius = Math.sqrt(
+        Math.pow(e.clientX - startX, 2) + Math.pow(e.clientY - startY, 2)
+      );
+      ctx.beginPath();
+      ctx.arc(startX, startY, radius, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (selectedToolRef.current === "line") {
+      // Line
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(e.clientX, e.clientY);
+      ctx.stroke();
     }
-  });
+  };
+
+  canvas.addEventListener("mousedown", mouseDownHandler);
+  canvas.addEventListener("mouseup", mouseUpHandler);
+  canvas.addEventListener("mousemove", mouseMoveHandler);
+
+  // Return cleanup function
+  return () => {
+    canvas.removeEventListener("mousedown", mouseDownHandler);
+    canvas.removeEventListener("mouseup", mouseUpHandler);
+    canvas.removeEventListener("mousemove", mouseMoveHandler);
+  };
 }
 
 function clearCanvas(
@@ -107,10 +161,20 @@ function clearCanvas(
   ctx.fillStyle = "rgba(0, 0, 0)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  existingShapes.map((shape) => {
+  existingShapes.forEach((shape) => {
+    ctx.strokeStyle = "rgba(255,255,255)";
+
     if (shape.type === "rect") {
-      ctx.strokeStyle = "rgba(255,255,255)";
       ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
+    } else if (shape.type === "circle") {
+      ctx.beginPath();
+      ctx.arc(shape.centerX, shape.centerY, shape.radius, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (shape.type === "line") {
+      ctx.beginPath();
+      ctx.moveTo(shape.startX, shape.startY);
+      ctx.lineTo(shape.endX, shape.endY);
+      ctx.stroke();
     }
   });
 }
@@ -118,19 +182,23 @@ function clearCanvas(
 const getExistingShapes = async (roomId: string) => {
   try {
     const res = await axios.get(`${HTTP_BACKEND}/chats/${roomId}`);
-    // console.log("SHAPE h", res);
     const messages = res.data.chats;
 
-    const shapes = messages.map((x: { message: string }) => {
-      // console.log(x);
-      const messageData = JSON.parse(x.message);
-      // console.log(messageData);
-      return messageData.shape;
-    });
+    const shapes = messages
+      .map((x: { message: string }) => {
+        try {
+          const messageData = JSON.parse(x.message);
+          return messageData.shape;
+        } catch (e) {
+          console.log("Error parsing shape:", e);
+          return null;
+        }
+      })
+      .filter(Boolean);
 
     return shapes;
   } catch (error) {
     console.log(error);
-    return null;
+    return [];
   }
 };
