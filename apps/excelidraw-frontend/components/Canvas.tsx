@@ -52,6 +52,10 @@ const Canvas = ({ roomId, socket }: { roomId: string; socket: WebSocket }) => {
     // if (canvasRef.current) {
     //   const g = new Game(canvasRef.current, roomId, socket);
     //   setGame(g);
+
+    //   return () => {
+    //       g.destroy();
+    //   }
     // }
   }, [roomId, socket]);
 
