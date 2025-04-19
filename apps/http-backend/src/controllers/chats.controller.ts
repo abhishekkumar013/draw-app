@@ -18,7 +18,7 @@ export const getRoomChatConroller = asyncHandler(
         orderBy: {
           id: "desc",
         },
-        take: 50,
+        take: 500,
       });
       return res.status(200).json({
         message: "room chat fetched successfully",

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { initdraw } from "@/draw";
 
 import { Square, Circle, Minus } from "lucide-react";
+// import { Game } from "@/draw/Game";
 
 const toolIcons = {
   rect: <Square size={20} />,
@@ -16,8 +17,17 @@ const Canvas = ({ roomId, socket }: { roomId: string; socket: WebSocket }) => {
     "rect"
   );
 
+  // const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  // useEffect(() => {
+  //   setDimensions({ width: window.innerWidth, height: window.innerHeight });
+  // }, []);
+
+  // const [game, setGame] = useState<Game>();
+
   useEffect(() => {
     selectedToolRef.current = selectedTool;
+    // game?.setTool(selectedTool);
   }, [selectedTool]);
 
   useEffect(() => {
@@ -38,6 +48,11 @@ const Canvas = ({ roomId, socket }: { roomId: string; socket: WebSocket }) => {
     return () => {
       if (cleanup) cleanup();
     };
+
+    // if (canvasRef.current) {
+    //   const g = new Game(canvasRef.current, roomId, socket);
+    //   setGame(g);
+    // }
   }, [roomId, socket]);
 
   return (
